@@ -1,0 +1,270 @@
+---
+title: "Class 09"
+author: "Shuyi Wang"
+date: "10/30/2018"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Unsupervised Learning Analysis of Cancer Cells
+
+Values in this data set describe characteristics of the cell nuclei present in digitized images of a fine needle aspiration (FNA) of a breast mass. For example radius (i.e. mean of distances from center to points on the perimeter), texture (i.e. standard deviation of gray-scale values), and  smoothness (local variation in radius lengths). Summary information is also provided for each group of cells including diagnosis (i.e. benign (not cancerous) and and malignant (cancerous)).
+
+Import the data.
+.
+```{r}
+url <- "https://bioboot.github.io/bimm143_W18/class-material/WisconsinCancer.csv"
+wisc_df <- read.csv(url)
+head(wisc_df)
+```
+
+So the diagnosis col is the lables
+```{r}
+table(wisc_df$diagnosis)
+```
+
+
+```{r}
+# Convert the features of the data: wisc.data
+wisc.data <- as.matrix(wisc_df[3:32], ncol = 30)
+wisc.data
+```
+
+```{r}
+# Set the row names of wisc.data
+row.names(wisc.data) <- wisc_df$id
+head(wisc.data)
+```
+
+setup a separate new vector called diagnosis to be 1 if a diagnosis is malignant ("M") and 0 otherwise. Note that R coerces TRUE to 1 and FALSE to 0.
+```{r}
+# Create diagnosis vector by completing the missing code
+diagnosis <- as.numeric(wisc_df$diagnosis == "M")
+sum(diagnosis)
+```
+
+# Performing PCA
+
+Q1. How many observations are in this dataset?
+```{r}
+dim(wisc.data)
+length(wisc.data)
+```
+
+Q2. How many variables/features in the data are suffixed with _mean?
+```{r}
+grep("_mean", colnames(wisc.data))
+x <- length(grep("_mean", colnames(wisc.data)))
+```
+There are `r x` mean measurments in this dataset.
+
+```{r}
+sum(x, na.rm = FALSE)
+```
+
+
+Q3. How many of the observations have a malignant diagnosis?
+
+
+```{r}
+# Check column means and standard deviations
+colMeans(wisc.data)
+
+apply(wisc.data,2,sd)
+```
+
+```{r}
+# Perform PCA on wisc.data by completing the following code
+wisc.pr <- prcomp(wisc.data, scale = TRUE)
+```
+
+```{r}
+# Look at summary of results
+summary(wisc.pr)
+```
+
+
+
+Q4. From your results, what proportion of the original variance is captured by the first principal components (PC1)?
+Q5. How many principal components (PCs) are required to describe at least 70% of the original variance in the data?
+Q6. How many principal components (PCs) are required to describe at least 90% of the original variance in the data?
+
+
+# Interpreting PCA
+
+```{r}
+biplot(wisc.pr)
+```
+Q7. What stands out to you about this plot? Is it easy or difficult to understand? Why?
+
+Let make a plot of PC1 vs PC2
+```{r}
+attributes(wisc.pr)
+```
+
+```{r}
+dim(wisc.pr$x)
+```
+
+
+```{r}
+plot(wisc.pr$x[,1], wisc.pr$x[,2])
+plot(wisc.pr$x[,1], wisc.pr$x[,2], col = diagnosis+1)
+```
+
+```{r}
+plot(wisc.pr$x[,1], wisc.pr$x[,3], col = diagnosis+1)
+```
+
+
+# Variance explained
+
+```{r}
+# Calculate the variance of each principal component by squaring the sdev component 
+pr.var <- wisc.pr$sdev^2
+# Each principal component by dividing by the total variance explained of all principal components
+pve <- pr.var/sum(pr.var)
+
+# Plot variance explained for each principal component
+plot(pve, xlab = "Principal Component", 
+     ylab = "Proportion of Variance Explained", 
+     ylim = c(0, 1), type = "o")
+```
+
+
+```{r}
+# Alternative scree plot of the same data, note data driven y-axis
+barplot(pve, ylab = "Precent of Variance Explained",
+     names.arg=paste0("PC",1:length(pve)), las=2, axes = FALSE)
+axis(2, at=pve, labels=round(pve,2)*100 )
+```
+
+```{r}
+# Plot cumulative proportion of variance explained
+plot(cumsum(pve), xlab = "Principal Component", 
+     ylab = "Cumulative Proportion of Variance Explained", 
+     ylim = c(0, 1), type = "o")
+```
+Q9. For the first principal component, what is the component of the loading vector (i.e. wisc.pr$rotation[,1]) for the feature  concave.points_mean?
+
+
+
+
+# Section 3
+
+```{r}
+# Scale the wisc.data data: data.scaled
+data.scaled <- scale(wisc.data)
+```
+
+We need a distance matrix for hierachical clustering input...
+```{r}
+data.dist <- dist(data.scaled)
+```
+
+Create a hierarchical clustering model 
+```{r}
+wisc.hclust <- hclust(data.dist, "complete")
+plot(wisc.hclust)
+```
+
+# Selecting numbers of clusters
+
+```{r}
+#cut the tree so that it has 4 clusters
+wisc.hclust.clusters <- cutree(wisc.hclust,k=4)
+
+table(wisc.hclust.clusters)
+```
+
+compare the cluster membership to the actual diagnoses
+```{r}
+table(wisc.hclust.clusters, diagnosis)
+```
+
+Q12. Can you find a better cluster vs diagnoses match with by cutting into a different number of clusters between 2 and 10?
+
+
+
+# Section 4 K-means clustering
+
+
+
+
+# Section 5 Clustering PCA results
+
+Let’s see if PCA improves or degrades the performance of hierarchical clustering.
+
+Using the minimum number of principal components required to describe at least 90% of the variability in the data, create a hierarchical clustering model with complete linkage.
+```{r}
+## Use the distance along the first 7 PCs for clustering i.e. wisc.pr$x[, 1:7]
+d.pr <- dist(wisc.pr$x[, 1:7])
+wisc.pr.hclust <- hclust(d.pr, method="complete")
+plot(wisc.pr.hclust)
+```
+
+```{r}
+wisc.pr.hclust.clusters <- cutree(wisc.pr.hclust, k=4)
+table(wisc.pr.hclust.clusters)
+```
+
+```{r}
+# Compare to actual diagnoses
+table(wisc.pr.hclust.clusters, diagnosis)
+```
+How well do the k-means and hierarchical clustering models you created in previous sections
+```{r}
+table(wisc.hclust.clusters, diagnosis)
+```
+
+# Section 6
+
+
+
+
+# Bonus section: predicting without PCA model
+
+Take new patient data and to out PCA model from
+```{r}
+## Predicting Malignancy Of New samples
+url <- "https://tinyurl.com/new-samples-CSV"
+new <- read.csv(url)
+npc <- predict(wisc.pr, newdata=new)
+
+plot(wisc.pr$x[,1:2], col=diagnosis+1)
+points(npc[,1], npc[,2], col="blue", pch=16, cex=3)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
