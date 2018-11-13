@@ -16,3 +16,49 @@ library(bio3d)
 file.name <- get.pdb("1hsg")
 ```
 
+Read this into R and examine composition
+
+```{r}
+hiv <- read.pdb(file.name)
+hiv
+```
+
+## Split into seperate protein and ligand files
+
+We will use the `trim.pdb()` function to split our input structure
+
+```{r}
+prot <- trim.pdb(hiv, "protein")
+prot
+```
+
+```{r}
+write.pdb(prot, file="1hsg_protein.pdb")
+```
+
+```{r}
+lig <- trim.pdb(hiv, "ligand")
+lig
+```
+
+```{r}
+write.pdb(lig, "1hsg_ligand.pdb")
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
